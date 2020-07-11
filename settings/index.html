@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>壁纸设置</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css" type="text/css"/>
+    <link rel="stylesheet" href="css/bootstrap-slider.css" type="text/css"/>
+    <script src="js/jquery.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/bootstrap-slider.js"></script>
+    <link rel="stylesheet" href="codemirror/codemirror.css">
+    <link rel="stylesheet" href="codemirror/material.css">
+    <script src="codemirror/codemirror.js"></script>
+    <script src="codemirror/javascript.js"></script>
+    <style>
+        body{
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-size: 100%;
+        }
+        .alpha{
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="jumbotron alpha" style="margin-top: 20px;" id="main">
+            <h3 id="title">
+            </h3>
+            <p id="description">
+            </p>
+			<p style="text-align: right;">
+                <!--a class="btn" href="javascript:void(0)" onclick="alert(document.body.innerHTML)">显示body »</a-->
+				<a class="btn" href="javascript:void(0)" onclick="closeWallpaper()">关闭壁纸 »</a>
+				<a class="btn" href="javascript:void(0)" onclick="reloadProperties()">恢复设置 »</a>
+				<a class="btn" href="javascript:void(0)" onclick="setWallpaper()">设置壁纸 »</a>
+			</p>
+            <p style="text-align: right;">
+				<a class="btn" href="javascript:void(0)" onclick="window.android.openBrowser('https://github.com/CrsxjjvdrcSvtbvrd/WebWallpaper')">打开Github »</a>
+				<a class="btn" href="javascript:void(0)" onclick="openJsCode()">自定义js »</a>
+			</p>
+            <hr>
+            <h4>属性</h4>
+        </div>
+    </div>
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title" id="myModalLabel">编辑js</h4>
+                </div>
+                <div class="modal-body">
+                    <form style="position: relative; margin-top: .5em;"><textarea id="jscode">
+                    </textarea>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" onclick="saveJsCode()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        var jsEditor = CodeMirror.fromTextArea(document.getElementById("jscode"),{
+            mode: "javascript",
+            lineNumbers: true,
+            lineWrapping: true,
+            theme:"material",
+            matchBrackets: true
+        });
+        function openJsCode(){
+            jsEditor.setValue(window.android.getCustomizeJS());
+            $("#myModal").modal("toggle");
+        }
+        function saveJsCode(){
+            window.android.saveCustomizeJS(jsEditor.getValue());
+        }
+    </script>
+    <script>
+        var container = document.getElementById("main");
+        var properties;
+        var project;
+        function getProperties(){
+            let obj = JSON.parse("{}");
+            for(let k in properties){
+                let v = JSON.parse("{}");
+                if(properties[k].type=="combo"){
+                    console.log("combo,"+document.getElementById(k).selectedIndex);
+                    v.value=document.getElementById(k).selectedIndex;
+                }
+                else if(properties[k].type=="bool"){
+                    console.log("bool,"+document.getElementById(k).checked);
+                    v.value=document.getElementById(k).checked;
+                }
+                else if(properties[k].type=="slider"){
+                    console.log("slider,"+sliders[k].slider("getValue")+","+$("#span_"+k).text());
+                    v.value=sliders[k].slider("getValue");
+                }
+                else if(properties[k].type=="color"||properties[k].type=="textinput"){
+                    console.log(properties[k].type+","+document.getElementById(k).value);
+                    v.value=document.getElementById(k).value;
+                }/**/
+                eval("obj."+k+"=v");
+            }
+            return JSON.stringify(obj,null,2);
+        }
+        let sliders = new Array();
+        function loadProperties(){
+            project = JSON.parse(window.android.getProjectJSON());
+            window.android.wallpaperFile(project.file);
+            document.body.style.backgroundImage = "url("+window.android.getWallpaperFile(project.preview)+")";
+            document.getElementById("title").innerHTML = project.title;
+            document.getElementById("description").innerHTML = project.description;
+            properties = project.general.properties;
+            for(let k in properties){
+                let type = properties[k].type;
+                let text = properties[k].text;
+                let dom_text = document.createElement("p");
+                if(text!=undefined){
+                    dom_text.innerHTML = text;
+                }else{
+                    dom_text.innerHTML = k;
+                }
+                if(type!=undefined){
+                    //type:
+                    //text,color,combo,file,directory,slider,bool,textinput
+                    if(type!="text"){
+                        if(type=="color"||type=="textinput"){
+                            let input = document.createElement("input");
+                            input.type="text";
+                            input.className="form-control"
+                            input.id = k;
+                            if(properties[k].value!=undefined){
+                                input.value = properties[k].value;
+                            }
+                            dom_text.appendChild(input);
+                        }else if(type=="bool"){
+                            let input = document.createElement("input");
+                            input.type="checkbox";
+                            input.id = k;
+                            if(properties[k].value!=undefined){
+                                input.checked = properties[k].value;
+                            }
+                            dom_text.appendChild(input);
+                        }else if(type=="combo"){
+                            let input = document.createElement("select");
+                            input.className="form-control"
+                            input.id = k;
+                            let options = properties[k].options;
+                            for(let i=0;i<options.length;i++){
+                                let opt = document.createElement("option");
+                                opt.setAttribute("value",options[i].value);
+                                opt.innerHTML = options[i].label;
+                                input.appendChild(opt);
+                            }
+                            if(properties[k].value!=undefined){
+                                input.selectedIndex = properties[k].value;
+                            }
+                            dom_text.appendChild(input);
+                        }else if(type=="slider"){
+                            let input = document.createElement("input");
+                            let min = 0;
+                            if(properties[k].min!=undefined)
+                                min = properties[k].min;
+                            let max = 100;
+                            if(properties[k].max!=undefined)
+                                max = properties[k].max;
+                            let val = 50;
+                            if(properties[k].value!=undefined)
+                                val = properties[k].value;
+                            input.setAttribute("data-slider-id",k);
+                            input.setAttribute("data-provide","slider");
+                            input.setAttribute("data-slider-min",min);
+                            input.setAttribute("data-slider-max",max);
+                            input.setAttribute("data-slider-value",val);
+                            input.setAttribute("data-slider-step",1);
+                            input.id = k;
+                            let span = document.createElement("span");
+                            span.id = "span_"+k;
+                            $(span).text(val);
+                            dom_text.appendChild(input);
+                            dom_text.appendChild(span);
+                            sliders[k] = $(input).slider();
+                            sliders[k].on("slide",function(slideEvt){
+                                $(span).text(slideEvt.value);
+                            });
+                        }else{
+                            let h = document.createElement("h6");
+                            h.innerHTML="暂不支持"+type;
+                            dom_text.appendChild(h);
+                        }
+                    }
+                }
+                container.appendChild(dom_text);
+            }
+        }
+        function init(){
+            let asp = window.android.getSavedProperties();
+            //console.log(asp);
+            let prop=undefined;
+            try{
+                console.log("a");
+                prop = JSON.parse(asp);
+                console.log("a1");
+            }catch(err){
+                console.log("b");
+                try {
+                    window.android.writeProperties(getProperties());
+                    console.log("b1");
+                } catch (error) {
+                    console.log("b2");
+                    console.log(error);
+                }
+            }
+            if(prop!=undefined){
+                console.log("c");
+                initProperties(prop);
+                console.log("c1");
+            }
+        }
+        function initProperties(p){
+            try{
+                for(let k in properties){
+                    let type = properties[k].type;
+                    if(type!=undefined){
+                    //type:
+                    //text,color,combo,file,directory,slider,bool,textinput
+                        try {
+                            if(type!="text"){
+                                if(type=="color"||type=="textinput"){
+                                    $("#"+k).val(p[k].value);
+                                }else if(type=="bool"){
+                                    document.getElementById(k).checked=p[k].value;
+                                }else if(type=="combo"){
+                                    document.getElementById(k).selectedIndex=p[k].value;
+                                }else if(type=="slider"){
+                                    $("#span_"+k).text(p[k].value);
+                                    sliders[k].slider("setValue",p[k].value);
+                                }else{
+                                    //to do
+                                }
+                            }
+                        } catch (error) {
+                            console.log(k);
+                            console.log(error);
+                        }
+                    }
+                }
+            }catch(err){
+                console.log(err);
+            }
+        }
+        function setWallpaper(){
+            window.android.writeProperties(getProperties());
+            window.android.setWallpaper();
+        }
+        function reloadProperties(){
+            let p = JSON.parse(window.android.getSavedProperties());
+            initProperties(p);
+        }
+        function closeWallpaper(){
+            window.android.closeWallpaper();
+        }
+        loadProperties();
+        init();
+    </script>
+</body>
+</html>
