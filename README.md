@@ -35,3 +35,4 @@ public String getPackageName() {
 
 ###### 4：运行
 
+![截图](/screenshot/settings.jpg)
