@@ -88,5 +88,4 @@ public String getPackageName() {
 
 ##### 参考
 
-[1]: https://gist.github.com/iangilman/71650d46384a2d4ae6387f2d4087cc37	"Android WallpaperService with WebView"
-
+[Android WallpaperService with WebView](https://gist.github.com/iangilman/71650d46384a2d4ae6387f2d4087cc37)

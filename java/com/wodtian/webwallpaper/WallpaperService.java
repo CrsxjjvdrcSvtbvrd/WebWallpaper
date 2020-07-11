@@ -253,7 +253,11 @@ public class WallpaperService extends android.service.wallpaper.WallpaperService
                     "    //let p = JSON.parse(window.androidWallpaperInterface.getProperties());\n" +
                     "\twindow.wallpaperPropertyListener.applyUserProperties(a);\n" +
                     "}");
-            execJS("loadProfile()");
+            execJS("try{\n" +
+                    "\tloadProfile();\n" +
+                    "}catch(error){\n" +
+                    "\tconsole.log(error);\n" +
+                    "}");
         }
         public void execJS(String js){
             evaluateJavascript(js,valueCallback);
