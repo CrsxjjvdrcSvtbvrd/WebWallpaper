@@ -4,11 +4,15 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.os.Bundle;
 
+import java.util.Random;
+
 public class MainActivity extends WallpaperSetting {
 
     static {
         WebWallpaper.PATH_SETTING="setting";
-        WebWallpaper.PATH_WALLPAPER="a";
+        //Random random = new Random();
+        //WebWallpaper.PATH_WALLPAPER="wallpaper"+random.nextInt(3);
+        WebWallpaper.PATH_WALLPAPER="wallpaper4";
     }
     @Override
     protected void onCreate(Bundle savedInstanceState) {

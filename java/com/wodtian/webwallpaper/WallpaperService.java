@@ -11,6 +11,7 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.View;
+import android.view.WindowManager;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
@@ -39,7 +40,28 @@ public class WallpaperService extends android.service.wallpaper.WallpaperService
         }
         private Canvas canvas;
         private SurfaceHolder surfaceHolder;
-
+        private boolean drawing = false;
+        private boolean running = false;
+        private int perFrame = 30;
+        private Runnable frame = new Runnable() {
+            @Override
+            public void run() {
+                drawing = true;
+                for(int i=0;running&&i<perFrame;i++) {
+                    if (wallpaperView == null) break;
+                    try {
+                        canvas = surfaceHolder.lockCanvas();
+                        if (canvas != null) {
+                            wallpaperView.draw(canvas);
+                            surfaceHolder.unlockCanvasAndPost(canvas);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                drawing = false;
+            }
+        };
         @Override
         public void onSurfaceCreated(SurfaceHolder holder) {
             super.onSurfaceCreated(holder);
@@ -49,6 +71,7 @@ public class WallpaperService extends android.service.wallpaper.WallpaperService
                 wallpaperView.destroy();
             wallpaperView = new WallpaperView(this);
             wallpaperView.loadUrl(WebWallpaper.getWallpaperFileURL(WebWallpaper.FILE_WALLPAPER));
+            running = true;
         }
 
         @Override
@@ -58,6 +81,7 @@ public class WallpaperService extends android.service.wallpaper.WallpaperService
                 wallpaperView.destroy();
                 wallpaperView=null;
             }
+            running = false;
             super.onSurfaceDestroyed(holder);
         }
 
@@ -80,8 +104,10 @@ public class WallpaperService extends android.service.wallpaper.WallpaperService
             if(wallpaperView==null)return;
             if(visible){
                 wallpaperView.execJS("resumeWallpaper()");
+                running = true;
             }else{
                 wallpaperView.execJS("pauseWallpaper");
+                running = false;
             }
         }
 
@@ -111,7 +137,9 @@ public class WallpaperService extends android.service.wallpaper.WallpaperService
         }
         @JavascriptInterface
         public void drawFrame(){
-            if(wallpaperView==null)return;
+            if(!drawing)
+                new Thread(frame).start();
+            /*if(wallpaperView==null)return;
             try{
                 canvas = surfaceHolder.lockCanvas();
                 if(canvas!=null){
@@ -120,7 +148,7 @@ public class WallpaperService extends android.service.wallpaper.WallpaperService
                 }
             }catch (Exception e){
                 e.printStackTrace();
-            }
+            }*/
         }
         @JavascriptInterface
         public String getProperties(){
@@ -220,6 +248,8 @@ public class WallpaperService extends android.service.wallpaper.WallpaperService
             });
             addJavascriptInterface(engine,"androidWallpaperInterface");
             setLayerType(View.LAYER_TYPE_HARDWARE,null);
+            setHorizontalScrollBarEnabled(false);
+            setVerticalScrollBarEnabled(false);
         }
         public void inject(){
             execJS("javascript:function loadCustomizeJS(){\n" +
@@ -248,10 +278,9 @@ public class WallpaperService extends android.service.wallpaper.WallpaperService
                     "}");
             execJS("InjectJS()");
             execJS("javascript:function loadProfile(){\n" +
-                    "    let p = window.androidWallpaperInterface.getProperties();\n" +
-                    "    let a = JSON.parse(p);\n" +
-                    "    //let p = JSON.parse(window.androidWallpaperInterface.getProperties());\n" +
-                    "\twindow.wallpaperPropertyListener.applyUserProperties(a);\n" +
+                    "\tlet p = JSON.parse(window.androidWallpaperInterface.getProperties());\n" +
+                    "\tif(window.wallpaperPropertyListener!=undefined)\n" +
+                    "\t\twindow.wallpaperPropertyListener.applyUserProperties(p);\n" +
                     "}");
             execJS("try{\n" +
                     "\tloadProfile();\n" +
